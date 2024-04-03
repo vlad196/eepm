@@ -4,6 +4,24 @@
 # https://www.altlinux.org/Nvidia#Смена_открытых_драйверов_на_проприетарные[1]
 # https://www.altlinux.org/Переход_на_драйверы_Nvidia_и_fglrx#Установка_проприетарных_драйверов_nvidia_и_fglrx_:
 
+# Распознаём язык локализации.
+LANG_SYSTEM=$(locale | grep LANG | awk -F'[=_]' '{print $2}')
+declare -A language_en language_ru
+language_en=(
+["switch to nvidia"]="Switch to using nVidia proprietary driver"
+    ["Only ALTLinux and ROSA"]="Only ALTLinux and ROSA Linux are supported"
+    ["nvidia already used"]="NVIDIA driver is already installed and used."
+    ["already run new kernel"]="The most recently installed \${USED_KFLAVOUR} kernel is running."
+    ["system has newer kernel"]="The system has a \${USED_KFLAVOUR} kernel that is fresher than the one that was launched."
+    ["reboot with new kernel"]="Reboot with a fresh \${USED_KFLAVOUR} kernel and restart: epm play switch-to-nvidia"
+# TODO дописать словарь
+)
+language_ru=( "Русский" "Выход" "Привет, Хабр!" )
+
+# Если LANG_SYSTEM = ru, пишем ру вариант вывода, если что-то другое en вариант.
+# TODO логика для выбора словаря
+# TODO везде вставить нужные ключи нужных словарей
+
 [ "$1" != "--run" ] && echo "Переход на использование проприетарных драйверов nvidia" && exit
 
 . $(dirname $0)/common.sh
@@ -70,13 +88,14 @@ fi
 # Создаем список дополнительных пакетов и их описания. Все новые пакеты добавлять в этот список.
 declare -A packages
 packages=(
-    ["nvidia-settings"]=" nvidia-settings — это инструмент для настройки видеокарт NVIDIA."
+    ["nvidia-settings"]="nvidia-settings — это инструмент для настройки видеокарт NVIDIA."
     ["nvidia-vaapi-driver"]="nvidia-vaapi-driver — это драйвер для аппаратного декодирования видео на видеокартах NVIDIA."
     ["vulkan-tools"]="vulkan-tools — это набор инструментов для работы с Vulkan API."
     ["nvidia-modprobe"]="nvidia-modprobe — это утилита для загрузки модулей ядра NVIDIA."
     ["nvidia-xconfig"]="nvidia-xconfig — это инструмент для управления конфигурацией X server для видеокарт NVIDIA."
     ["libvulkan1"]="libvulkan1 — это библиотека, которая предоставляет API Vulkan 1.x."
 )
+# TODO сделать англ словарь
 install_list=()
 
 # Для каждого пакета спрашиваем пользователя, хочет ли он его установить

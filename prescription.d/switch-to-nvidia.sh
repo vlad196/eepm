@@ -81,7 +81,40 @@ if ! grep "initcall_blacklist=simpledrm_platform_driver_init" /etc/sysconfig/gru
 	sed -i "s|^\(GRUB_CMDLINE_LINUX_DEFAULT='.*\)'\$|\1 initcall_blacklist=simpledrm_platform_driver_init'|" /etc/sysconfig/grub2
 fi
 
-# Активируем службы управления питания NVIDIA, без этих служб будет некоректно работать уход в сон
+# Проверяем возможные варианты для сохранения ресурсов видеопамяти
+echo "Checking the ability to save memory resources..."
+
+system_sleep=$(grep -oP '(?<=\[)[^\]]*(?=\])' /sys/power/mem_sleep)
+gpu_self_refresh=$(grep -oP '(?<=Video Memory Self Refresh: ).*' /proc/driver/nvidia/gpus/*/power)
+
+enable_s0ix_power_management () {
+	echo "Activation S0ix support..."
+	echo "options nvidia NVreg_EnableS0ixPowerManagement=1" > /etc/modprobe.d/nvidia_S0ix_support.conf
+	echo "S0ix support enabled."
+
+}
+preserve_videoMemory_allocations () {
+	echo "Activation of preserve videomemory allocation..."
+	echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > /etc/modprobe.d/nvidia_memory_allocation.conf
+	echo "Preserve memory allocation activated."
+}
+
+if [[ "$system_sleep" = "s2idle" &&  "$gpu_self_refresht" = "Supported" ]]; then
+	echo "S0ix support detected."
+	echo "S0ix is a standby power-states mode that allows you to keep the videomemory powered.Videomemory will not be saved to disk, but will spend more energy when sleeping."
+	read -p "Do you want to enable S0ix power-state? [Y/n] " answer
+	answer=${answer,,}
+
+	if [[ $answer = 'y' || $answer = '' ]]; then
+		enable_s0ix_power_management
+	else
+		preserve_videoMemory_allocations
+else
+	preserve_videoMemory_allocations
+fi
+
+# Активируем службы управления питания NVIDIA. Необходим как сохранения ресурсов видеопамяти на диск, так для CUDA
+echo "Activating nvidia power management interfaces..."
 systemctl enable nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service
 
 # Запускаем регенерацию initrd
